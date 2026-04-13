@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hacker_news
+      POSTGRES_USER: hn
+      POSTGRES_PASSWORD: hn_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hn -d hacker_news"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_APP: server.py
+      ENV_TYPE: Dev
+      FLASK_DEBUG: "1"
+      PYTHONPATH: /app
+      DB_CONNECTION: postgresql+psycopg2://hn:hn_password@db:5432/hacker_news
+      DB_NAME: hacker_news
+      DB_USER: hn
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    command: >
+      sh -c "alembic upgrade head &&
+             python management.py init_db &&
+             flask run --host=0.0.0.0 --port=8001 --debug"
+
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
