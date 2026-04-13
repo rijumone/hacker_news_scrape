@@ -1,0 +1,623 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hacker News Scrape API",
+    "version": "1.0.0",
+    "description": "API for retrieving Hacker News post/comment data and aggregate statistics."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Content"
+    },
+    {
+      "name": "Statistics"
+    }
+  ],
+  "paths": {
+    "/api/hacker_news/comment/{comment_id}": {
+      "get": {
+        "tags": ["Content"],
+        "summary": "Get comment by id",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Comment not found"
+          }
+        }
+      }
+    },
+    "/api/hacker_news/post/{post_id}": {
+      "get": {
+        "tags": ["Content"],
+        "summary": "Get post by id",
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found"
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/average_comment_count": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get average comment count",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/average_comment_tree_depth": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get average comment tree depth",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average depth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/average_comment_word_count": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get average comment word count",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average word count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/average_point_count": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get average point count",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average points",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/comments_highest_word_count": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get comments with highest word count",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comments list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommentWithWordCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/comment_words": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get most frequent comment words",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Word frequency list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WordFrequency"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/deepest_comment_tree": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get deepest comment tree",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post with nested comment tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/posts_highest_comment_count": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get posts with highest comment count",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/posts_highest_point_count": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get posts with highest point count",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/post_types": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get post type counts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post type counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PostTypeCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/title_words": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get most frequent title words",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Word frequency list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WordFrequency"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/top_posts": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get top posts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/top_websites": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get top websites",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Website counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WebsiteCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/users_most_comments": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get users with most comments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserCommentCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/users_most_posts": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get users with most posts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserPostCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hacker_news/stats/{time_period}/users_most_words": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Get users with most words in comments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimePeriod"
+          },
+          {
+            "$ref": "#/components/parameters/Count"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User word counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserWordCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TimePeriod": {
+        "name": "time_period",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": ["hour", "day", "week", "all"]
+        }
+      },
+      "Count": {
+        "name": "count",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "schemas": {
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" },
+          "created": { "type": "string" },
+          "feed_rank": { "type": "integer" },
+          "level": { "type": "integer" },
+          "parent_comment": { "type": ["integer", "null"] },
+          "post_id": { "type": "integer" },
+          "username": { "type": "string" }
+        }
+      },
+      "CommentWithWordCount": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Comment" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "total_word_count": { "type": "integer" }
+            }
+          }
+        ]
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "comment_count": { "type": "integer" },
+          "created": { "type": "string" },
+          "feed_rank": { "type": "integer" },
+          "link": { "type": "string" },
+          "point_count": { "type": "integer" },
+          "title": { "type": "string" },
+          "type": { "type": "string" },
+          "username": { "type": "string" },
+          "website": { "type": "string" }
+        }
+      },
+      "WordFrequency": {
+        "type": "object",
+        "properties": {
+          "word": { "type": "string" },
+          "ndoc": { "type": "integer" },
+          "nentry": { "type": "integer" }
+        }
+      },
+      "PostTypeCount": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer" },
+          "type": { "type": "string" }
+        }
+      },
+      "WebsiteCount": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer" },
+          "website": { "type": "string" }
+        }
+      },
+      "UserCommentCount": {
+        "type": "object",
+        "properties": {
+          "comment_count": { "type": "integer" },
+          "username": { "type": "string" }
+        }
+      },
+      "UserPostCount": {
+        "type": "object",
+        "properties": {
+          "post_count": { "type": "integer" },
+          "username": { "type": "string" }
+        }
+      },
+      "UserWordCount": {
+        "type": "object",
+        "properties": {
+          "comment_count": { "type": "integer" },
+          "username": { "type": "string" },
+          "word_count": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

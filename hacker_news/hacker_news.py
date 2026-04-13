@@ -360,6 +360,29 @@ def get_post(post_id):
         return make_response('Post not found', 404)
 
 
+def get_posts():
+    # Connect to database
+    session = models.Session()
+
+    # Get latest feed-based data for each post from database
+    latest_post_feed = session.query(models.FeedPost.post_id.label('post_id'),
+        func.max(models.FeedPost.feed_id).label('latest_feed_id')).group_by(
+        models.FeedPost.post_id).subquery()
+
+    posts = session.query(models.Post).with_entities(models.Post.id,
+        models.Post.created, models.Post.link, models.Post.title,
+        models.Post.type, models.Post.username, models.Post.website,
+        models.FeedPost.comment_count, models.FeedPost.feed_rank,
+        models.FeedPost.point_count).join(models.FeedPost).join(
+        latest_post_feed, (models.FeedPost.post_id ==
+        latest_post_feed.c.post_id) & (models.FeedPost.feed_id ==
+        latest_post_feed.c.latest_feed_id)).order_by(models.Post.id.asc()).all()
+
+    session.close()
+
+    return jsonify([post._asdict() for post in posts])
+
+
 def get_feeds(time_period):
     # Return time period if there is no database connection
     if not os.environ['DB_CONNECTION']:

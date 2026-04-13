@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, request
+from flask import Flask, request, render_template_string, send_from_directory
 from flask_cors import CORS
 
 from hacker_news import hacker_news
@@ -11,11 +11,53 @@ if os.environ['ENV_TYPE'] == 'Dev':
     app.config['DEBUG'] = True
 
 
+@app.route('/swagger.json', methods=['GET'])
+def swagger_json():
+        return send_from_directory(app.root_path, 'swagger.json')
+
+
+@app.route('/docs', methods=['GET'])
+def docs():
+        return render_template_string('''
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Hacker News Scrape API Docs</title>
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"
+        />
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+            window.onload = function() {
+                window.ui = SwaggerUIBundle({
+                    url: '/swagger.json',
+                    dom_id: '#swagger-ui'
+                });
+            };
+        </script>
+    </body>
+</html>
+''')
+
+
 @app.route('/api/hacker_news/comment/<comment_id>', methods=['GET'])
 def comment(comment_id):
     # Retrieve latest version of comment from Hacker News scrapes
     if request.method == 'GET':
         return hacker_news.get_comment(comment_id)
+
+
+@app.route('/api/hacker_news/post', methods=['GET'])
+def posts():
+    # Retrieve latest version of all posts from Hacker News scrapes
+    if request.method == 'GET':
+        return hacker_news.get_posts()
 
 
 @app.route('/api/hacker_news/post/<post_id>', methods=['GET'])

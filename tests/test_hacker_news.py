@@ -98,6 +98,30 @@ class TestPost(HackerNewsTestCase):
         self.assertEqual(error, 'Post not found')
 
 
+# Test /api/hacker_news/post endpoint [GET] (all posts)
+class TestPosts(HackerNewsTestCase):
+    def test_posts_get(self):
+        # Act
+        response = self.client.get('/api/hacker_news/post')
+        posts = json.loads(response.get_data(as_text=True))
+
+        # Assert
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(isinstance(posts, list), True)
+        self.assertEqual(len(posts) > 0, True)
+
+        post = next(item for item in posts if item['id'] == 1)
+
+        self.assertEqual(post['comment_count'], 1)
+        self.assertEqual(post['feed_rank'], 1)
+        self.assertEqual(post['link'], 'https://test.com')
+        self.assertEqual(post['point_count'], 1)
+        self.assertEqual(post['title'], 'Show HN: Test')
+        self.assertEqual(post['type'], 'show')
+        self.assertEqual(post['username'], 'test')
+        self.assertEqual(post['website'], 'test.com')
+
+
 # Test /api/hacker_news/stats/<time_period>/average_comment_count endpoint
 # [GET]
 class TestAverageCommentCount(HackerNewsTestCase):
@@ -2417,6 +2441,29 @@ class TestUsersMostComments(HackerNewsTestCase):
 
         # Assert
         self.assertEqual(len(users), 2)
+
+
+# Test docs endpoints [GET]
+class TestDocs(HackerNewsTestCase):
+    def test_swagger_json_get(self):
+        # Act
+        response = self.client.get('/swagger.json')
+        spec = json.loads(response.get_data(as_text=True))
+
+        # Assert
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(spec['openapi'], '3.0.3')
+        self.assertEqual(spec['info']['title'], 'Hacker News Scrape API')
+
+    def test_docs_get(self):
+        # Act
+        response = self.client.get('/docs')
+        body = response.get_data(as_text=True)
+
+        # Assert
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual('SwaggerUIBundle' in body, True)
+        self.assertEqual('/swagger.json' in body, True)
 
     def test_users_get_sample(self):
         # Arrange
