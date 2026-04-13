@@ -50,6 +50,27 @@
         }
       }
     },
+    "/api/hacker_news/post": {
+      "get": {
+        "tags": ["Content"],
+        "summary": "Get all posts",
+        "responses": {
+          "200": {
+            "description": "Posts payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/hacker_news/post/{post_id}": {
       "get": {
         "tags": ["Content"],
