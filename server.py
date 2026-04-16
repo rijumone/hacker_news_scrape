@@ -7,7 +7,7 @@ from hacker_news import hacker_news
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-if os.environ['ENV_TYPE'] == 'Dev':
+if os.getenv('ENV', os.getenv('ENV_TYPE', 'PROD')).upper() == 'DEV':
     app.config['DEBUG'] = True
 
 

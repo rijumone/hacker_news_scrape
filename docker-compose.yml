@@ -27,7 +27,8 @@ services:
         condition: service_healthy
     environment:
       FLASK_APP: server.py
-      ENV_TYPE: Dev
+      ENV: ${ENV:-PROD}
+      ENV_TYPE: ${ENV:-PROD}
       FLASK_DEBUG: "1"
       PYTHONPATH: /app
       DB_CONNECTION: postgresql+psycopg2://hn:hn_password@db:5432/hacker_news
@@ -40,7 +41,11 @@ services:
     command: >
       sh -c "alembic upgrade head &&
              python management.py init_db &&
-             flask run --host=0.0.0.0 --port=8001 --debug"
+             if [ \"${ENV:-PROD}\" = \"DEV\" ] || [ \"${ENV:-PROD}\" = \"Dev\" ]; then
+               flask run --host=0.0.0.0 --port=8001 --debug;
+             else
+               gunicorn server:app --bind 0.0.0.0:8001 --workers=2 --timeout=120 --log-file=-;
+             fi"
 
   adminer:
     image: adminer:latest
