@@ -72,6 +72,17 @@ class TestPost(HackerNewsTestCase):
         self.assertEqual(post['type'], 'show')
         self.assertEqual(post['username'], 'test')
         self.assertEqual(post['website'], 'test.com')
+        self.assertEqual(isinstance(post['comments'], list), True)
+        self.assertEqual(len(post['comments']), 1)
+
+        comment = post['comments'][0]
+        self.assertEqual(comment['content'], 'test')
+        self.assertEqual(comment['feed_rank'], 1)
+        self.assertEqual(comment['id'], 1)
+        self.assertEqual(comment['level'], 0)
+        self.assertEqual(comment['parent_comment'], None)
+        self.assertEqual(comment['post_id'], 1)
+        self.assertEqual(comment['username'], 'test')
 
         # Ensure created timestamp matches GMT format
         timestamp_pattern = re.compile(
@@ -82,6 +93,8 @@ class TestPost(HackerNewsTestCase):
         self.assertEqual(bool(timestamp_pattern.match(
             post['created'])), True
             )
+        self.assertEqual(bool(timestamp_pattern.match(
+            comment['created'])), True)
 
     def test_post_get_error(self):
         # Arrange

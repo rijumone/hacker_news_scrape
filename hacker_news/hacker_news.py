@@ -69,6 +69,8 @@ async def scrape_page(page, feed_id, loop):
     # Get all post rows from HTML tree
     post_rows = feed_soup.find_all('tr', 'athing')
 
+    post_comment_tasks = []
+
     for post_row in post_rows:
         # Get subtext row with additional post data
         subtext_row = post_row.next_sibling
@@ -166,7 +168,11 @@ async def scrape_page(page, feed_id, loop):
         session.commit()
 
         # Create asynchronous task to scrape post page for its comments
-        loop.create_task(scrape_post(post_id, feed_id, loop, None))
+        post_comment_tasks.append(
+            loop.create_task(scrape_post(post_id, feed_id, loop, None)))
+
+    if post_comment_tasks:
+        await asyncio.wait(post_comment_tasks)
 
     return
 
@@ -192,13 +198,13 @@ async def scrape_post(post_id, feed_id, loop, page_number):
 
     post_soup = BeautifulSoup(post_content, 'html.parser')
 
-    # If post page contains a "More" link to more comments, create asynchronous
-    # task to scrape that page for its comments
-    if (post_soup.find('a', 'morelink')):
-        page_number = post_soup.find('a', 'morelink').get(
-            'href').split('&p=')[1]
+    next_page_number = None
 
-        loop.create_task(scrape_post(post_id, feed_id, loop, page_number))
+    # If post page contains a "More" link to more comments, scrape the next
+    # page after current page comment data is saved
+    if (post_soup.find('a', 'morelink')):
+        next_page_number = post_soup.find('a', 'morelink').get(
+            'href').split('&p=')[1]
 
     # Get all comment rows from HTML tree
     comment_rows = post_soup.select('tr.athing.comtr')
@@ -295,19 +301,48 @@ async def scrape_post(post_id, feed_id, loop, page_number):
         # Increment comment feed rank to get current comment's rank
         comment_feed_rank += 1
 
-        # Add feed-based comment data to database
-        feed_comment = models.FeedComment(comment_id=comment_id,
-            feed_id=feed_id, feed_rank=comment_feed_rank)
+        # Add feed-based comment data to database if it does not already exist
+        feed_comment_exists = session.query(models.FeedComment.comment_id
+            ).filter_by(comment_id=comment_id, feed_id=feed_id).scalar()
 
-        session.add(feed_comment)
+        if not feed_comment_exists:
+            feed_comment = models.FeedComment(comment_id=comment_id,
+                feed_id=feed_id, feed_rank=comment_feed_rank)
+
+            session.add(feed_comment)
 
     session.commit()
 
+    session.close()
+
+    if next_page_number:
+        await scrape_post(post_id, feed_id, loop, next_page_number)
+
     # Print message if there are no more pages of comments to scrape
-    if not post_soup.find('a', 'morelink'):
+    else:
         print('Post ' + str(post_id) + ' and its comments scraped')
 
     return
+
+
+def get_post_comments(session, post_id):
+    # Get latest feed-based data for each comment associated with post
+    latest_comment_feed = session.query(
+        models.FeedComment.comment_id.label('comment_id'),
+        func.max(models.FeedComment.feed_id).label(
+            'latest_feed_id')).group_by(
+        models.FeedComment.comment_id).subquery()
+
+    return session.query(models.Comment).with_entities(
+        models.Comment.id, models.Comment.content, models.Comment.created,
+        models.Comment.level, models.Comment.parent_comment,
+        models.Comment.post_id, models.Comment.username,
+        models.FeedComment.feed_rank).join(models.FeedComment).join(
+        latest_comment_feed, (models.FeedComment.comment_id ==
+        latest_comment_feed.c.comment_id) & (models.FeedComment.feed_id ==
+        latest_comment_feed.c.latest_feed_id)).filter(
+        models.Comment.post_id == post_id).order_by(
+        models.Comment.created.asc()).all()
 
 
 def get_comment(comment_id):
@@ -345,13 +380,44 @@ def get_post(post_id):
             models.Post.link, models.Post.title, models.Post.type,
             models.Post.username, models.Post.website,
             models.FeedPost.comment_count, models.FeedPost.feed_rank,
-            models.FeedPost.point_count).join(models.FeedPost).filter(
+            models.FeedPost.point_count,
+            models.FeedPost.feed_id.label('feed_id')).join(
+            models.FeedPost).filter(
             models.Post.id == post_id).order_by(
             models.FeedPost.feed_id.desc()).limit(1).one()
 
+        comments = get_post_comments(session, post_id)
+
+        post_data = post._asdict()
+        feed_id = post_data.pop('feed_id')
+
+        if not comments and post_data['comment_count'] > 0:
+            session.close()
+
+            loop = asyncio.new_event_loop()
+
+            try:
+                asyncio.set_event_loop(loop)
+
+                loop.run_until_complete(scrape_post(post_id, feed_id, loop,
+                    None))
+
+            except Exception as error:
+                print('Failed to backfill comments for post ' + str(post_id) +
+                    ': ' + str(error))
+
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
+
+            session = models.Session()
+            comments = get_post_comments(session, post_id)
+
+        post_data['comments'] = [comment._asdict() for comment in comments]
+
         session.close()
 
-        return jsonify(post._asdict())
+        return jsonify(post_data)
 
     # Return error if post not returned from query
     except NoResultFound:

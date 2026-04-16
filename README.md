@@ -33,11 +33,23 @@ To retrieve data for a specific Hacker News post or comment, a client can send a
 
 \
 **GET** /api/hacker_news/post/[post_id]
-* Retrieve the latest version of a post from Hacker News scrapes.
+* Retrieve the latest version of a post from Hacker News scrapes, including its comments.
 * Example response body:
 ```javascript
 {
     "comment_count": 0,
+    "comments": [
+        {
+            "content": "Developing low-cost wireless soil moisture sensors for agriculture. It's old technology but the proven benefit is huge, and adoption has been really poor (mostly) because of the cost.",
+            "created": "Mon, 23 Apr 2018 20:34:41 GMT",
+            "feed_rank": 50,
+            "id": 16905149,
+            "level": 0,
+            "parent_comment": null,
+            "post_id": 16905146,
+            "username": "simonrobb"
+        }
+    ],
     "created": "Sat, 21 Apr 2018 20:34:06 GMT",
     "feed_rank": 90,
     "link": "https://medium.com/@RoyaPak/designing-for-ethics-706efa1a483e",

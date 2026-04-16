@@ -91,7 +91,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Post"
+                  "$ref": "#/components/schemas/PostWithComments"
                 }
               }
             }
@@ -580,6 +580,17 @@
           }
         ]
       },
+      "CommentWithId": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Comment" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" }
+            }
+          }
+        ]
+      },
       "Post": {
         "type": "object",
         "properties": {
@@ -594,6 +605,22 @@
           "username": { "type": "string" },
           "website": { "type": "string" }
         }
+      },
+      "PostWithComments": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Post" },
+          {
+            "type": "object",
+            "properties": {
+              "comments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CommentWithId"
+                }
+              }
+            }
+          }
+        ]
       },
       "WordFrequency": {
         "type": "object",
