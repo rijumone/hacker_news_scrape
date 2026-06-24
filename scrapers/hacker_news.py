@@ -100,13 +100,23 @@ class HackerNewsScraper(BaseScraper):
                 point_count = 0
                 type = 'job'
 
-            feed_post = models.FeedPost(comment_count=comment_count, feed_id=feed_id,
-                                        feed_rank=feed_rank, point_count=point_count, post_id=post_id)
-            session.add(feed_post)
-            session.commit()
+            feed_post_exists = session.query(models.FeedPost.post_id).filter_by(
+                post_id=post_id, feed_id=feed_id).scalar()
 
-            post_comment_tasks.append(
-                loop.create_task(self.scrape_post(post_uid, feed_id, loop, None)))
+            if not feed_post_exists:
+                feed_post = models.FeedPost(comment_count=comment_count,
+                    feed_id=feed_id, feed_rank=feed_rank, point_count=point_count,
+                    post_id=post_id)
+
+                session.add(feed_post)
+                from sqlalchemy.exc import IntegrityError
+                try:
+                    session.commit()
+                except IntegrityError:
+                    session.rollback()
+
+                post_comment_tasks.append(
+                    loop.create_task(self.scrape_post(post_uid, feed_id, loop, None)))
 
         if post_comment_tasks:
             await asyncio.wait(post_comment_tasks)
