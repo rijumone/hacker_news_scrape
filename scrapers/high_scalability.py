@@ -20,6 +20,8 @@ class HighScalabilityScraper(BaseScraper):
         loop = asyncio.get_event_loop()
         tasks = [
             loop.create_task(self.scrape_page(1, feed_id, loop)),
+            loop.create_task(self.scrape_page(2, feed_id, loop)),
+            loop.create_task(self.scrape_page(3, feed_id, loop)),
         ]
 
         wait_tasks = asyncio.wait(tasks)
