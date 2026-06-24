@@ -12,12 +12,12 @@ if os.getenv('ENV', os.getenv('ENV_TYPE', 'PROD')).upper() == 'DEV':
 
 
 @app.route('/swagger.json', methods=['GET'])
-def swagger_json(source):
+def swagger_json():
         return send_from_directory(app.root_path, 'swagger.json')
 
 
 @app.route('/docs', methods=['GET'])
-def docs(source):
+def docs():
         return render_template_string('''
 <!DOCTYPE html>
 <html lang="en">
