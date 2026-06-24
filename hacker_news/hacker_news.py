@@ -14,315 +14,6 @@ from sqlalchemy.sql import func
 from hacker_news import models
 
 
-def scrape_loop():
-    # Connect to database
-    session = models.Session()
-
-    # Add feed to database
-    new_feed = models.Feed()
-
-    session.add(new_feed)
-
-    session.commit()
-
-    feed_id = new_feed.id
-
-    # Create asynchronous tasks to scrape first three pages of Hacker News
-    loop = asyncio.get_event_loop()
-
-    tasks = [
-        loop.create_task(scrape_page(1, feed_id, loop)),
-        loop.create_task(scrape_page(2, feed_id, loop)),
-        loop.create_task(scrape_page(3, feed_id, loop))
-        ]
-
-    wait_tasks = asyncio.wait(tasks)
-
-    loop.run_until_complete(wait_tasks)
-
-    loop.close()
-
-    session.close()
-
-    print('Scrape completed for first three pages of Hacker News.')
-
-    return
-
-
-async def scrape_page(page, feed_id, loop):
-    # Connect to database
-    session = models.Session()
-
-    print('Scrape initiated for page ' + str(page) + ' of Hacker News.')
-
-    # Get current UTC time in seconds
-    now = int(datetime.utcnow().strftime('%s'))
-
-    # Get HTML tree from feed page
-    feed_html = requests.get(
-        'https://news.ycombinator.com/news?p=' + str(page))
-
-    feed_content = feed_html.content
-
-    feed_soup = BeautifulSoup(feed_content, 'html.parser')
-
-    # Get all post rows from HTML tree
-    post_rows = feed_soup.find_all('tr', 'athing')
-
-    post_comment_tasks = []
-
-    for post_row in post_rows:
-        # Get subtext row with additional post data
-        subtext_row = post_row.next_sibling
-
-        # Get post id
-        post_id = post_row.get('id')
-
-        # Check if post exists in database
-        post_exists = session.query(models.Post.id).filter_by(
-            id=post_id).scalar()
-
-        # Get core post data if it is not in database already
-        if not post_exists:
-            # Get UTC timestamp for post's posting time by subtracting the
-            # number of days/hours/minutes ago given on the webpage from the
-            # current UTC timestamp
-            time_unit = subtext_row.find('span', 'age').a.get_text().split()[1]
-
-            if 'day' in time_unit:
-                created = now - 86400 * int(subtext_row.find(
-                    'span', 'age').a.get_text().split()[0])
-
-            elif 'hour' in time_unit:
-                created = now - 3600 * int(subtext_row.find(
-                    'span', 'age').a.get_text().split()[0])
-
-            else:
-                created = now - 60 * int(subtext_row.find(
-                    'span', 'age').a.get_text().split()[0])
-
-            created = time.strftime(
-                '%Y-%m-%d %H:%M', time.localtime(created))
-
-            # Get post's link
-            link_span = post_row.find('span', 'titleline').find('a')
-            link = link_span.get('href')
-
-            # Get post's title
-            title = link_span.get_text()
-
-            # Set post's type based on title
-            if 'Show HN:' in title:
-                type = 'show'
-            elif 'Ask HN:' in title:
-                type = 'ask'
-            else:
-                type = 'article'
-
-            # Get username of user who posted post or set as blank for job
-            # posting
-            if subtext_row.find('a', 'hnuser'):
-                username = subtext_row.find('a', 'hnuser').get_text()
-            else:
-                username = ''
-
-            # Get website that post is from or set as blank for ask posting
-            if post_row.find('span', 'sitestr'):
-                website = post_row.find('span', 'sitestr').get_text()
-            else:
-                website = ''
-
-            # Add post data to database
-            post = models.Post(created=created, id=post_id, link=link,
-                title=title, type=type, username=username, website=website)
-
-            session.add(post)
-
-        # Get post's comment count if it is listed (otherwise, set to 0)
-        if 'comment' in subtext_row.find_all(
-            href='item?id=' + post_id)[-1].get_text():
-                unicode_count = UnicodeDammit(subtext_row.find_all(
-                    href='item?id=' + post_id)[-1].get_text())
-                comment_count = unicode_count.unicode_markup.split()[0]
-        else:
-            comment_count = 0
-
-        # Get post's rank on feed page
-        feed_rank = post_row.find('span', 'rank').get_text()[:-1]
-
-        # Get post's score if it is listed (otherwise, post is job posting)
-        if subtext_row.find('span', 'score'):
-            point_count = subtext_row.find(
-                'span', 'score').get_text().split()[0]
-        else:
-            point_count = 0
-            type = 'job'
-
-        # Add feed-based post data to database
-        feed_post = models.FeedPost(comment_count=comment_count,
-            feed_id=feed_id, feed_rank=feed_rank, point_count=point_count,
-            post_id=post_id)
-
-        session.add(feed_post)
-
-        session.commit()
-
-        # Create asynchronous task to scrape post page for its comments
-        post_comment_tasks.append(
-            loop.create_task(scrape_post(post_id, feed_id, loop, None)))
-
-    if post_comment_tasks:
-        await asyncio.wait(post_comment_tasks)
-
-    return
-
-
-async def scrape_post(post_id, feed_id, loop, page_number):
-    # Connect to database
-    session = models.Session()
-
-    # Get current UTC time in seconds
-    now = int(datetime.utcnow().strftime('%s'))
-
-    # Get HTML tree from post's webpage, specifying page number if given
-    if page_number:
-        post_html = requests.get(
-            'https://news.ycombinator.com/item?id=' + str(post_id) + '&p=' +
-            str(page_number))
-
-    else:
-        post_html = requests.get(
-            'https://news.ycombinator.com/item?id=' + str(post_id))
-
-    post_content = post_html.content
-
-    post_soup = BeautifulSoup(post_content, 'html.parser')
-
-    next_page_number = None
-
-    # If post page contains a "More" link to more comments, scrape the next
-    # page after current page comment data is saved
-    if (post_soup.find('a', 'morelink')):
-        next_page_number = post_soup.find('a', 'morelink').get(
-            'href').split('&p=')[1]
-
-    # Get all comment rows from HTML tree
-    comment_rows = post_soup.select('tr.athing.comtr')
-
-    # Set starting comment feed rank to 0
-    comment_feed_rank = 0
-
-    for comment_row in comment_rows:
-        # Get comment id
-        comment_id = comment_row.get('id')
-
-        # Check if comment exists in database
-        comment_exists = session.query(models.Comment.id).filter_by(
-            id=comment_id).scalar()
-
-        # Get core comment data if it is not in database already
-        if not comment_exists:
-            # If comment has content span, get text from span
-            if comment_row.find('div', 'comment').find_all('span'):
-                comment_content = comment_row.find(
-                    'div', 'comment').find_all('span')[0].get_text()
-
-                # Remove the last word ('reply') from the comment content
-                # and strip trailing whitespace
-                comment_content = comment_content.rsplit(' ', 1)[0].strip()
-
-                total_word_count = len(comment_content.split())
-
-            # Otherwise, comment is flagged, so get flagged message as text
-            # and strip trailing whitespace
-            else:
-                comment_content = comment_row.find(
-                    'div', 'comment').get_text().strip()
-
-                total_word_count = 0
-
-            # Get UTC timestamp for comment's posting time by subtracting
-            # the number of days/hours/minutes ago given on the webpage from
-            # the current UTC timestamp
-            comment_time_unit = comment_row.find(
-                'span', 'age').a.get_text().split()[1]
-
-            if 'day' in comment_time_unit:
-                comment_created = now - 86400 * int(comment_row.find(
-                    'span', 'age').a.get_text().split()[0])
-
-            elif 'hour' in comment_time_unit:
-                comment_created = now - 3600 * int(comment_row.find(
-                    'span', 'age').a.get_text().split()[0])
-
-            else:
-                comment_created = now - 60 * int(comment_row.find(
-                    'span', 'age').a.get_text().split()[0])
-
-            comment_created = time.strftime(
-                '%Y-%m-%d %H:%M', time.localtime(comment_created))
-
-            # Get comment's level in tree by getting indentation width
-            # value divided by value of one indent (40px)
-            level = int(comment_row.find(
-                'td', 'ind').contents[0].get('width')) / 40
-
-            # Set parent comment as blank if comment is the top-level
-            # comment
-            if level == 0:
-                parent_comment = None
-
-            # Otherwise, get preceding comment in comment tree
-            else:
-                parent_comment = session.query(models.Comment).with_entities(
-                    models.Comment.id).join(models.FeedComment).filter(
-                    models.Comment.level == (level - 1)).filter(
-                    models.FeedComment.feed_id == feed_id).filter(
-                    models.Comment.post_id == post_id).order_by(
-                    models.FeedComment.feed_rank).limit(1).one()[0]
-
-            # Get username of user who posted comment
-            try:
-                comment_username = comment_row.find('a', 'hnuser').get_text()
-
-            except AttributeError:
-                comment_username = ''
-
-            # Add scraped comment data to database
-            comment = models.Comment(content=comment_content,
-                created=comment_created, id=comment_id, level=level,
-                parent_comment=parent_comment, post_id=post_id,
-                total_word_count=total_word_count, username=comment_username,
-                word_counts=func.to_tsvector('simple_english',
-                comment_content.lower()))
-
-            session.add(comment)
-
-        # Increment comment feed rank to get current comment's rank
-        comment_feed_rank += 1
-
-        # Add feed-based comment data to database if it does not already exist
-        feed_comment_exists = session.query(models.FeedComment.comment_id
-            ).filter_by(comment_id=comment_id, feed_id=feed_id).scalar()
-
-        if not feed_comment_exists:
-            feed_comment = models.FeedComment(comment_id=comment_id,
-                feed_id=feed_id, feed_rank=comment_feed_rank)
-
-            session.add(feed_comment)
-
-    session.commit()
-
-    session.close()
-
-    if next_page_number:
-        await scrape_post(post_id, feed_id, loop, next_page_number)
-
-    # Print message if there are no more pages of comments to scrape
-    else:
-        print('Post ' + str(post_id) + ' and its comments scraped')
-
-    return
 
 
 def get_post_comments(session, post_id):
@@ -334,7 +25,7 @@ def get_post_comments(session, post_id):
         models.FeedComment.comment_id).subquery()
 
     return session.query(models.Comment).with_entities(
-        models.Comment.id, models.Comment.content, models.Comment.created,
+        models.Comment.id, models.Comment.content, models.Comment.created, models.Comment.uid,
         models.Comment.level, models.Comment.parent_comment,
         models.Comment.post_id, models.Comment.username,
         models.FeedComment.feed_rank).join(models.FeedComment).join(
@@ -342,7 +33,7 @@ def get_post_comments(session, post_id):
         latest_comment_feed.c.comment_id) & (models.FeedComment.feed_id ==
         latest_comment_feed.c.latest_feed_id)).filter(
         models.Comment.post_id == post_id).order_by(
-        models.Comment.created.asc()).all()
+        models.Comment.created, models.Comment.uid.asc()).all()
 
 
 def get_comment(comment_id):
@@ -352,7 +43,7 @@ def get_comment(comment_id):
     # Get comment from database
     try:
         comment = session.query(models.Comment).with_entities(
-            models.Comment.content, models.Comment.created,
+            models.Comment.content, models.Comment.created, models.Comment.uid,
             models.Comment.level, models.Comment.parent_comment,
             models.Comment.post_id, models.Comment.username,
             models.FeedComment.feed_rank).join(models.FeedComment).filter(
@@ -370,36 +61,46 @@ def get_comment(comment_id):
         return make_response('Comment not found', 404)
 
 
-def get_post(post_id):
+def get_post(post_id, source='all'):
     # Connect to database
     session = models.Session()
 
     # Get post from database
     try:
-        post = session.query(models.Post).with_entities(models.Post.created,
-            models.Post.link, models.Post.title, models.Post.type,
+        query = session.query(models.Post).with_entities(models.Post.created,
+            models.Post.uid, models.Post.source, models.Post.link, models.Post.title, models.Post.type,
             models.Post.username, models.Post.website,
             models.FeedPost.comment_count, models.FeedPost.feed_rank,
             models.FeedPost.point_count,
             models.FeedPost.feed_id.label('feed_id')).join(
-            models.FeedPost).filter(
-            models.Post.id == post_id).order_by(
-            models.FeedPost.feed_id.desc()).limit(1).one()
+            models.FeedPost)
+            
+        if str(post_id).isdigit():
+            query = query.filter(models.Post.id == int(post_id))
+        else:
+            query = query.filter(models.Post.uid == post_id)
+            
+        if source != 'all':
+            query = query.filter(models.Post.source == source)
+            
+        post = query.order_by(models.FeedPost.feed_id.desc()).limit(1).one()
 
-        comments = get_post_comments(session, post_id)
+        comments = get_post_comments(session, post.id if str(post_id).isdigit() else post_id) # Simplify comment backfilling for non-HN sources for now
 
         post_data = post._asdict()
         feed_id = post_data.pop('feed_id')
 
-        if not comments and post_data['comment_count'] > 0:
+        if not comments and post_data['comment_count'] > 0 and post_data['source'] == 'hacker_news':
             session.close()
 
             loop = asyncio.new_event_loop()
 
             try:
+                from scrapers.hacker_news import HackerNewsScraper
+                scraper = HackerNewsScraper()
                 asyncio.set_event_loop(loop)
 
-                loop.run_until_complete(scrape_post(post_id, feed_id, loop,
+                loop.run_until_complete(scraper.scrape_post(str(post_id), feed_id, loop,
                     None))
 
             except Exception as error:
@@ -426,40 +127,53 @@ def get_post(post_id):
         return make_response('Post not found', 404)
 
 
-def get_posts():
+def get_posts(source='all'):
     # Connect to database
     session = models.Session()
 
-    # Get latest feed-based data for each post from database
-    latest_post_feed = session.query(models.FeedPost.post_id.label('post_id'),
-        func.max(models.FeedPost.feed_id).label('latest_feed_id')).group_by(
-        models.FeedPost.post_id).subquery()
+    base_feed_query = session.query(models.FeedPost.post_id.label('post_id'),
+        func.max(models.FeedPost.feed_id).label('latest_feed_id'))
+        
+    if source != 'all':
+        base_feed_query = base_feed_query.join(models.Feed).filter(models.Feed.source == source)
 
-    posts = session.query(models.Post).with_entities(models.Post.id,
-        models.Post.created, models.Post.link, models.Post.title,
+    # Get latest feed-based data for each post from database
+    latest_post_feed = base_feed_query.group_by(models.FeedPost.post_id).subquery()
+
+    post_query = session.query(models.Post).with_entities(models.Post.id,
+        models.Post.uid, models.Post.source, models.Post.created, models.Post.uid, models.Post.source, models.Post.link, models.Post.title,
         models.Post.type, models.Post.username, models.Post.website,
         models.FeedPost.comment_count, models.FeedPost.feed_rank,
         models.FeedPost.point_count).join(models.FeedPost).join(
         latest_post_feed, (models.FeedPost.post_id ==
         latest_post_feed.c.post_id) & (models.FeedPost.feed_id ==
-        latest_post_feed.c.latest_feed_id)).order_by(models.Post.id.asc()).all()
+        latest_post_feed.c.latest_feed_id))
+        
+    if source != 'all':
+        post_query = post_query.filter(models.Post.source == source)
+
+    posts = post_query.order_by(models.Post.id.asc()).all()
 
     session.close()
 
     return jsonify([post._asdict() for post in posts])
 
 
-def get_feeds(time_period):
+def get_feeds(time_period, source='all'):
     # Return time period if there is no database connection
     if not os.environ['DB_CONNECTION']:
         return time_period
 
     # Connect to database
     session = models.Session()
+    
+    base_query = session.query(models.Feed)
+    if source != 'all':
+        base_query = base_query.filter(models.Feed.source == source)
 
     # Get requested feed(s) from database based on passed time value
     if time_period == 'day':
-        feed_ids = [row.id for row in session.query(models.Feed).filter(
+        feed_ids = [row.id for row in base_query.filter(
             models.Feed.created > date.today()).all()]
 
     # Get one feed per day in past week if 'week' is specified
@@ -467,9 +181,12 @@ def get_feeds(time_period):
         feed_ids = []
 
         for i in range(7):
-            feed_ids.append(session.query(models.Feed.id).filter(
-                models.Feed.created > date.today() - timedelta(days=i)).limit(
-                1).one()[0])
+            try:
+                feed_ids.append(base_query.filter(
+                    models.Feed.created > date.today() - timedelta(days=i)).limit(
+                    1).one()[0])
+            except NoResultFound:
+                continue
 
     # Return no feed_ids if 'all' is specified so all data can be queried
     elif time_period == 'all':
@@ -477,7 +194,7 @@ def get_feeds(time_period):
 
     # Return most recent feed_id if time_period is 'hour' or unspecified
     else:
-        feed_ids = [row.id for row in session.query(models.Feed).order_by(
+        feed_ids = [row.id for row in base_query.order_by(
             models.Feed.created.desc()).limit(1)]
 
     return feed_ids
@@ -569,7 +286,7 @@ def get_comments_with_highest_word_counts(feed_ids):
     # Get comments with highest word counts, filtering by feed_ids if specified
     if feed_ids:
         subquery = session.query(models.Comment).with_entities(
-            models.Comment.content, models.Comment.created, models.Comment.id,
+            models.Comment.content, models.Comment.created, models.Comment.uid, models.Comment.id,
             models.Comment.level, models.Comment.parent_comment,
             models.Comment.post_id, models.Comment.username,
             models.Comment.total_word_count).join(models.FeedComment).filter(
@@ -583,7 +300,7 @@ def get_comments_with_highest_word_counts(feed_ids):
 
     else:
         query = session.query(models.Comment).with_entities(
-            models.Comment.content, models.Comment.created, models.Comment.id,
+            models.Comment.content, models.Comment.created, models.Comment.uid, models.Comment.id,
             models.Comment.level, models.Comment.parent_comment,
             models.Comment.post_id, models.Comment.username,
             models.Comment.total_word_count).order_by(
@@ -675,7 +392,7 @@ def get_deepest_comment_tree(feed_ids):
     # feed_ids if specified
     if feed_ids:
         subquery = session.query(models.Comment).with_entities(
-            models.Comment.content, models.Comment.created, models.Comment.id,
+            models.Comment.content, models.Comment.created, models.Comment.uid, models.Comment.id,
             models.Comment.level, models.Comment.parent_comment,
             models.Comment.post_id, models.Comment.username).join(
             models.FeedComment).filter(
@@ -687,7 +404,7 @@ def get_deepest_comment_tree(feed_ids):
             subquery.columns.get('level').desc()).limit(1).one()._asdict()
 
         # Get post information
-        post = session.query(models.Post).with_entities(models.Post.created,
+        post = session.query(models.Post).with_entities(models.Post.created, models.Post.uid, models.Post.source,
             models.Post.id, models.Post.link, models.Post.title,
             models.Post.type, models.Post.username,
             models.FeedPost.comment_count, models.FeedPost.feed_rank,
@@ -698,13 +415,13 @@ def get_deepest_comment_tree(feed_ids):
 
     else:
         comment = session.query(models.Comment).with_entities(
-            models.Comment.content, models.Comment.created, models.Comment.id,
+            models.Comment.content, models.Comment.created, models.Comment.uid, models.Comment.id,
             models.Comment.level, models.Comment.parent_comment,
             models.Comment.post_id, models.Comment.username).order_by(
             models.Comment.level.desc()).limit(1).one()._asdict()
 
         # Get post information
-        post = session.query(models.Post).with_entities(models.Post.created,
+        post = session.query(models.Post).with_entities(models.Post.created, models.Post.uid, models.Post.source,
             models.Post.id, models.Post.link, models.Post.title,
             models.Post.type, models.Post.username,
             models.FeedPost.comment_count, models.FeedPost.feed_rank,
@@ -718,7 +435,7 @@ def get_deepest_comment_tree(feed_ids):
     # Get parent comments of comment to get full comment tree
     while comment['parent_comment']:
         parent_comment = session.query(models.Comment).with_entities(
-            models.Comment.content, models.Comment.created,
+            models.Comment.content, models.Comment.created, models.Comment.uid,
             models.Comment.id, models.Comment.parent_comment,
             models.Comment.username).filter(
             models.Comment.id == comment['parent_comment']).one()._asdict()
@@ -758,7 +475,7 @@ def get_posts_with_highest_comment_counts(feed_ids):
     # Get posts with highest comment counts, filtering by feed_ids if specified
     if feed_ids:
         subquery = session.query(models.Post).with_entities(
-            models.Post.created, models.Post.id, models.Post.link,
+            models.Post.created, models.Post.uid, models.Post.source, models.Post.id, models.Post.link,
             models.Post.title, models.Post.type, models.Post.username,
             models.Post.website, models.FeedPost.comment_count,
             models.FeedPost.feed_rank, models.FeedPost.point_count).join(
@@ -772,7 +489,7 @@ def get_posts_with_highest_comment_counts(feed_ids):
 
     else:
         subquery = session.query(models.Post).with_entities(
-            models.Post.created, models.Post.id, models.Post.link,
+            models.Post.created, models.Post.uid, models.Post.source, models.Post.id, models.Post.link,
             models.Post.title, models.Post.type, models.Post.username,
             models.Post.website, models.FeedPost.comment_count,
             models.FeedPost.feed_rank, models.FeedPost.point_count).join(
@@ -804,7 +521,7 @@ def get_posts_with_highest_point_counts(feed_ids):
     # Get posts with highest point counts, filtering by feed_ids if specified
     if feed_ids:
         subquery = session.query(models.Post).with_entities(
-            models.Post.created, models.Post.id, models.Post.link,
+            models.Post.created, models.Post.uid, models.Post.source, models.Post.id, models.Post.link,
             models.Post.title, models.Post.type, models.Post.username,
             models.Post.website, models.FeedPost.comment_count,
             models.FeedPost.feed_rank, models.FeedPost.point_count).join(
@@ -818,7 +535,7 @@ def get_posts_with_highest_point_counts(feed_ids):
 
     else:
         subquery = session.query(models.Post).with_entities(
-            models.Post.created, models.Post.id, models.Post.link,
+            models.Post.created, models.Post.uid, models.Post.source, models.Post.id, models.Post.link,
             models.Post.title, models.Post.type, models.Post.username,
             models.Post.website, models.FeedPost.comment_count,
             models.FeedPost.feed_rank, models.FeedPost.point_count).join(
@@ -957,7 +674,7 @@ def get_top_posts(feed_ids):
     # Get posts in order of rank, filtering by feed_ids if specified
     if feed_ids:
         subquery = session.query(models.Post).with_entities(
-            models.Post.created, models.Post.id, models.Post.link,
+            models.Post.created, models.Post.uid, models.Post.source, models.Post.id, models.Post.link,
             models.Post.title, models.Post.type, models.Post.username,
             models.Post.website, models.FeedPost.comment_count,
             models.FeedPost.feed_rank, models.FeedPost.point_count).join(
@@ -973,7 +690,7 @@ def get_top_posts(feed_ids):
 
     else:
         subquery = session.query(models.Post).with_entities(
-            models.Post.created, models.Post.id, models.Post.link,
+            models.Post.created, models.Post.uid, models.Post.source, models.Post.id, models.Post.link,
             models.Post.title, models.Post.type, models.Post.username,
             models.Post.website, models.FeedPost.comment_count,
             models.FeedPost.feed_rank, models.FeedPost.point_count).join(

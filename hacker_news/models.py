@@ -20,14 +20,17 @@ Base = declarative_base()
 class Feed(Base):
     __tablename__ = 'feed'
     id = Column(Integer, primary_key=True, nullable=False)
+    source = Column(String, nullable=False, default='hacker_news')
     created = Column(TIMESTAMP(timezone=False), default=datetime.utcnow,
         nullable=False)
-    __table_args__ = (Index('feed_id_index', 'id'), )
+    __table_args__ = (Index('feed_id_index', 'id', 'source'), )
 
 
 class Post(Base):
     __tablename__ = 'post'
     id = Column(Integer, primary_key=True, nullable=False)
+    uid = Column(String, nullable=True)
+    source = Column(String, nullable=False, default='hacker_news')
     created = Column(TIMESTAMP(timezone=False), default=datetime.utcnow,
         nullable=False)
     link = Column(TEXT, nullable=False)
@@ -36,12 +39,13 @@ class Post(Base):
         nullable=False)
     username = Column(TEXT)
     website = Column(TEXT)
-    __table_args__ = (Index('post_index', 'id', 'username'), )
+    __table_args__ = (Index('post_index', 'id', 'uid', 'source', 'username'), )
 
 
 class Comment(Base):
     __tablename__ = 'comment'
     id = Column(Integer, primary_key=True, nullable=False)
+    uid = Column(String, nullable=True)
     content = Column(TEXT, nullable=False)
     created = Column(TIMESTAMP(timezone=False), default=datetime.utcnow,
         nullable=False)
@@ -53,7 +57,7 @@ class Comment(Base):
     total_word_count = Column(Integer, default=0, nullable=False)
     username = Column(TEXT, nullable=False)
     word_counts = Column(TSVECTOR, nullable=False)
-    __table_args__ = (Index('comment_index', 'id', 'level', 'parent_comment',
+    __table_args__ = (Index('comment_index', 'id', 'uid', 'level', 'parent_comment',
         'post_id', 'total_word_count', 'username'), )
 
     post = relationship("Post", back_populates='comments')
