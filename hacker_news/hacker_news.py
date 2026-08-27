@@ -67,7 +67,7 @@ def get_post(post_id, source='all'):
 
     # Get post from database
     try:
-        query = session.query(models.Post).with_entities(models.Post.created,
+        query = session.query(models.Post).with_entities(models.Post.id, models.Post.created,
             models.Post.uid, models.Post.source, models.Post.link, models.Post.title, models.Post.type,
             models.Post.username, models.Post.website,
             models.FeedPost.comment_count, models.FeedPost.feed_rank,
@@ -85,7 +85,7 @@ def get_post(post_id, source='all'):
             
         post = query.order_by(models.FeedPost.feed_id.desc()).limit(1).one()
 
-        comments = get_post_comments(session, post.id if str(post_id).isdigit() else post_id) # Simplify comment backfilling for non-HN sources for now
+        comments = get_post_comments(session, post.id)
 
         post_data = post._asdict()
         feed_id = post_data.pop('feed_id')
@@ -127,7 +127,7 @@ def get_post(post_id, source='all'):
         return make_response('Post not found', 404)
 
 
-def get_posts(source='all'):
+def get_posts(source='all', subreddit=None):
     # Connect to database
     session = models.Session()
 
@@ -151,6 +151,9 @@ def get_posts(source='all'):
         
     if source != 'all':
         post_query = post_query.filter(models.Post.source == source)
+        
+    if subreddit:
+        post_query = post_query.filter(models.Post.link.like(f'%/r/{subreddit}/%'))
 
     posts = post_query.order_by(models.Post.id.asc()).all()
 

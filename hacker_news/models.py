@@ -33,6 +33,7 @@ class Post(Base):
     source = Column(String, nullable=False, default='hacker_news')
     created = Column(TIMESTAMP(timezone=False), default=datetime.utcnow,
         nullable=False)
+    content = Column(TEXT, nullable=True)
     link = Column(TEXT, nullable=False)
     title = Column(TEXT, nullable=False)
     type = Column(Enum('article', 'ask', 'job', 'show', name='post_type'),

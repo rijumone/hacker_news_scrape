@@ -57,7 +57,8 @@ def comment(source, comment_id):
 def posts(source):
     # Retrieve latest version of all posts from Hacker News scrapes
     if request.method == 'GET':
-        return hacker_news.get_posts(source)
+        subreddit = request.args.get('subreddit')
+        return hacker_news.get_posts(source, subreddit=subreddit)
 
 
 @app.route('/api/<source>/post/<post_id>', methods=['GET'])

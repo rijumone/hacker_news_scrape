@@ -13,6 +13,7 @@ from hacker_news import hacker_news, models
 from scrapers.hacker_news import scrape_loop as hn_scrape_loop
 from scrapers.lobsters import scrape_lobsters_loop
 from scrapers.high_scalability import scrape_high_scalability_loop
+from scrapers.reddit import scrape_reddit_loop
 
 def initialize_database():
     # Connect to database
@@ -163,6 +164,8 @@ if args.action == 'scrape_lobsters':
     scrape_lobsters_loop()
 if args.action == 'scrape_high_scalability':
     scrape_high_scalability_loop()
+if args.action == 'scrape_reddit':
+    scrape_reddit_loop()
 if args.action == 'backup_db':
     # Only backup database on Sunday
     if datetime.now(timezone.utc).weekday() == 6:
