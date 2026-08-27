@@ -69,7 +69,7 @@ def get_post(post_id, source='all'):
     try:
         query = session.query(models.Post).with_entities(models.Post.id, models.Post.created,
             models.Post.uid, models.Post.source, models.Post.link, models.Post.title, models.Post.type,
-            models.Post.username, models.Post.website,
+            models.Post.username, models.Post.website, models.Post.content,
             models.FeedPost.comment_count, models.FeedPost.feed_rank,
             models.FeedPost.point_count,
             models.FeedPost.feed_id.label('feed_id')).join(
@@ -141,8 +141,8 @@ def get_posts(source='all', subreddit=None):
     latest_post_feed = base_feed_query.group_by(models.FeedPost.post_id).subquery()
 
     post_query = session.query(models.Post).with_entities(models.Post.id,
-        models.Post.uid, models.Post.source, models.Post.created, models.Post.uid, models.Post.source, models.Post.link, models.Post.title,
-        models.Post.type, models.Post.username, models.Post.website,
+        models.Post.uid, models.Post.source, models.Post.created, models.Post.link, models.Post.title,
+        models.Post.type, models.Post.username, models.Post.website, models.Post.content,
         models.FeedPost.comment_count, models.FeedPost.feed_rank,
         models.FeedPost.point_count).join(models.FeedPost).join(
         latest_post_feed, (models.FeedPost.post_id ==

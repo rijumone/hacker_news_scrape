@@ -145,6 +145,25 @@ class RedditScraper(BaseScraper):
         response = requests.get(url)
         post_md = response.text
         
+        post = session.query(models.Post).filter_by(id=post_id).first()
+        if post and (not post.content or len(post.content) < 10):
+            title_idx = post_md.find(f"# {post.title}")
+            if title_idx == -1:
+                title_idx = post_md.find("\n# ")
+            if title_idx != -1:
+                body_start = post_md.find("\n", title_idx)
+                if body_start != -1:
+                    end_idx = post_md.find("\n Share", body_start)
+                    if end_idx == -1:
+                        end_idx = post_md.find("\n Sort by:", body_start)
+                    if end_idx != -1:
+                        extracted_content = post_md[body_start:end_idx].strip()
+                        if extracted_content.endswith("Read more"):
+                            extracted_content = extracted_content[:-9].strip()
+                        if extracted_content:
+                            post.content = extracted_content
+                            session.commit()
+        
         comment_regex = re.compile(r"^\[([A-Za-z0-9_-]+)\]\(https://www\.reddit\.com/user/\1/?\)\s*^•\[(.*?)\]\((https://www\.reddit\.com/r/[^/]+/comments/[^/]+/comment/([a-z0-9]+)/?)\)", re.MULTILINE)
         c_matches = list(comment_regex.finditer(post_md))
         
