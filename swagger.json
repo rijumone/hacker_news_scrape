@@ -19,11 +19,22 @@
     }
   ],
   "paths": {
-    "/api/hacker_news/comment/{comment_id}": {
+    "/api/{source}/comment/{comment_id}": {
       "get": {
-        "tags": ["Content"],
+        "tags": [
+          "Content"
+        ],
         "summary": "Get comment by id",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "comment_id",
             "in": "path",
@@ -50,9 +61,11 @@
         }
       }
     },
-    "/api/hacker_news/post": {
+    "/api/{source}/post": {
       "get": {
-        "tags": ["Content"],
+        "tags": [
+          "Content"
+        ],
         "summary": "Get all posts",
         "responses": {
           "200": {
@@ -68,14 +81,45 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subreddit",
+            "in": "query",
+            "required": false,
+            "description": "Optional subreddit filter for Reddit posts",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
-    "/api/hacker_news/post/{post_id}": {
+    "/api/{source}/post/{post_id}": {
       "get": {
-        "tags": ["Content"],
+        "tags": [
+          "Content"
+        ],
         "summary": "Get post by id",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "post_id",
             "in": "path",
@@ -102,11 +146,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/average_comment_count": {
+    "/api/{source}/stats/{time_period}/average_comment_count": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get average comment count",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           }
@@ -125,11 +180,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/average_comment_tree_depth": {
+    "/api/{source}/stats/{time_period}/average_comment_tree_depth": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get average comment tree depth",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           }
@@ -148,11 +214,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/average_comment_word_count": {
+    "/api/{source}/stats/{time_period}/average_comment_word_count": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get average comment word count",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           }
@@ -171,11 +248,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/average_point_count": {
+    "/api/{source}/stats/{time_period}/average_point_count": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get average point count",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           }
@@ -194,11 +282,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/comments_highest_word_count": {
+    "/api/{source}/stats/{time_period}/comments_highest_word_count": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get comments with highest word count",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -223,11 +322,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/comment_words": {
+    "/api/{source}/stats/{time_period}/comment_words": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get most frequent comment words",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -252,11 +362,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/deepest_comment_tree": {
+    "/api/{source}/stats/{time_period}/deepest_comment_tree": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get deepest comment tree",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           }
@@ -275,12 +396,23 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/posts_highest_comment_count": {
+    "/api/{source}/stats/{time_period}/posts_highest_comment_count": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get posts with highest comment count",
         "parameters": [
           {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/TimePeriod"
           },
           {
@@ -304,12 +436,23 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/posts_highest_point_count": {
+    "/api/{source}/stats/{time_period}/posts_highest_point_count": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get posts with highest point count",
         "parameters": [
           {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/TimePeriod"
           },
           {
@@ -333,11 +476,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/post_types": {
+    "/api/{source}/stats/{time_period}/post_types": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get post type counts",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           }
@@ -359,11 +513,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/title_words": {
+    "/api/{source}/stats/{time_period}/title_words": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get most frequent title words",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -388,11 +553,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/top_posts": {
+    "/api/{source}/stats/{time_period}/top_posts": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get top posts",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -417,11 +593,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/top_websites": {
+    "/api/{source}/stats/{time_period}/top_websites": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get top websites",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -446,11 +633,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/users_most_comments": {
+    "/api/{source}/stats/{time_period}/users_most_comments": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get users with most comments",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -475,11 +673,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/users_most_posts": {
+    "/api/{source}/stats/{time_period}/users_most_posts": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get users with most posts",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -504,11 +713,22 @@
         }
       }
     },
-    "/api/hacker_news/stats/{time_period}/users_most_words": {
+    "/api/{source}/stats/{time_period}/users_most_words": {
       "get": {
-        "tags": ["Statistics"],
+        "tags": [
+          "Statistics"
+        ],
         "summary": "Get users with most words in comments",
         "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "The source of the data (e.g., hacker_news, lobsters, high_scalability, reddit)",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/TimePeriod"
           },
@@ -542,7 +762,12 @@
         "required": true,
         "schema": {
           "type": "string",
-          "enum": ["hour", "day", "week", "all"]
+          "enum": [
+            "hour",
+            "day",
+            "week",
+            "all"
+          ]
         }
       },
       "Count": {
@@ -559,34 +784,61 @@
       "Comment": {
         "type": "object",
         "properties": {
-          "content": { "type": "string" },
-          "created": { "type": "string" },
-          "feed_rank": { "type": "integer" },
-          "level": { "type": "integer" },
-          "parent_comment": { "type": ["integer", "null"] },
-          "post_id": { "type": "integer" },
-          "username": { "type": "string" }
+          "content": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "feed_rank": {
+            "type": "integer"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "parent_comment": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "post_id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          }
         }
       },
       "CommentWithWordCount": {
         "allOf": [
-          { "$ref": "#/components/schemas/Comment" },
+          {
+            "$ref": "#/components/schemas/Comment"
+          },
           {
             "type": "object",
             "properties": {
-              "id": { "type": "integer" },
-              "total_word_count": { "type": "integer" }
+              "id": {
+                "type": "integer"
+              },
+              "total_word_count": {
+                "type": "integer"
+              }
             }
           }
         ]
       },
       "CommentWithId": {
         "allOf": [
-          { "$ref": "#/components/schemas/Comment" },
+          {
+            "$ref": "#/components/schemas/Comment"
+          },
           {
             "type": "object",
             "properties": {
-              "id": { "type": "integer" }
+              "id": {
+                "type": "integer"
+              }
             }
           }
         ]
@@ -594,21 +846,43 @@
       "Post": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "comment_count": { "type": "integer" },
-          "created": { "type": "string" },
-          "feed_rank": { "type": "integer" },
-          "link": { "type": "string" },
-          "point_count": { "type": "integer" },
-          "title": { "type": "string" },
-          "type": { "type": "string" },
-          "username": { "type": "string" },
-          "website": { "type": "string" }
+          "id": {
+            "type": "integer"
+          },
+          "comment_count": {
+            "type": "integer"
+          },
+          "created": {
+            "type": "string"
+          },
+          "feed_rank": {
+            "type": "integer"
+          },
+          "link": {
+            "type": "string"
+          },
+          "point_count": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          }
         }
       },
       "PostWithComments": {
         "allOf": [
-          { "$ref": "#/components/schemas/Post" },
+          {
+            "$ref": "#/components/schemas/Post"
+          },
           {
             "type": "object",
             "properties": {
@@ -625,45 +899,73 @@
       "WordFrequency": {
         "type": "object",
         "properties": {
-          "word": { "type": "string" },
-          "ndoc": { "type": "integer" },
-          "nentry": { "type": "integer" }
+          "word": {
+            "type": "string"
+          },
+          "ndoc": {
+            "type": "integer"
+          },
+          "nentry": {
+            "type": "integer"
+          }
         }
       },
       "PostTypeCount": {
         "type": "object",
         "properties": {
-          "count": { "type": "integer" },
-          "type": { "type": "string" }
+          "count": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          }
         }
       },
       "WebsiteCount": {
         "type": "object",
         "properties": {
-          "count": { "type": "integer" },
-          "website": { "type": "string" }
+          "count": {
+            "type": "integer"
+          },
+          "website": {
+            "type": "string"
+          }
         }
       },
       "UserCommentCount": {
         "type": "object",
         "properties": {
-          "comment_count": { "type": "integer" },
-          "username": { "type": "string" }
+          "comment_count": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          }
         }
       },
       "UserPostCount": {
         "type": "object",
         "properties": {
-          "post_count": { "type": "integer" },
-          "username": { "type": "string" }
+          "post_count": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          }
         }
       },
       "UserWordCount": {
         "type": "object",
         "properties": {
-          "comment_count": { "type": "integer" },
-          "username": { "type": "string" },
-          "word_count": { "type": "integer" }
+          "comment_count": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "word_count": {
+            "type": "integer"
+          }
         }
       }
     }
