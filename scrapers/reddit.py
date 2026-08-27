@@ -142,7 +142,11 @@ class RedditScraper(BaseScraper):
             return
             
         url = f'http://192.168.1.12:4337/{link}'
-        response = requests.get(url)
+        headers = {
+            'X-Wait-For-Selector': 'shreddit-comment',
+            'X-Timeout': '29'
+        }
+        response = requests.get(url, headers=headers)
         post_md = response.text
         
         post = session.query(models.Post).filter_by(id=post_id).first()
