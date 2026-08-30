@@ -11,19 +11,22 @@ from hacker_news import models
 from scrapers.base import BaseScraper
 
 class RedditScraper(BaseScraper):
-    def scrape_loop(self):
-        # Read subreddits.yml
-        subreddits_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'subreddits.yml')
-        if not os.path.exists(subreddits_file):
-            print(f"File {subreddits_file} not found.")
-            return
-
+    def scrape_loop(self, subreddit=None):
         subreddits = []
-        with open(subreddits_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('- '):
-                    subreddits.append(line[2:].strip())
+        if subreddit:
+            subreddits.append(subreddit)
+        else:
+            # Read subreddits.yml
+            subreddits_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'subreddits.yml')
+            if not os.path.exists(subreddits_file):
+                print(f"File {subreddits_file} not found.")
+                return
+
+            with open(subreddits_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('- '):
+                        subreddits.append(line[2:].strip())
 
         session = models.Session()
         new_feed = models.Feed(source='reddit')
@@ -50,7 +53,12 @@ class RedditScraper(BaseScraper):
         now = int(datetime.utcnow().strftime('%s'))
         
         url = f'http://192.168.1.12:4337/https://www.reddit.com/r/{subreddit}/'
-        response = requests.get(url)
+        headers = {
+            'X-With-Shadow-Dom': 'true',
+            'X-Wait-For-Selector': 'shreddit-post',
+            'X-Timeout': '29'
+        }
+        response = requests.get(url, headers=headers)
         feed_md = response.text
         
         title_regex = re.compile(r"^\[(.*?)\]\((https://www\.reddit\.com/r/[^/]+/comments/([a-z0-9]+)/[^/]+/?)\)", re.MULTILINE)
@@ -144,7 +152,8 @@ class RedditScraper(BaseScraper):
         url = f'http://192.168.1.12:4337/{link}'
         headers = {
             'X-Wait-For-Selector': 'shreddit-comment',
-            'X-Timeout': '29'
+            'X-Timeout': '29',
+            'X-With-Shadow-Dom': 'true'
         }
         response = requests.get(url, headers=headers)
         post_md = response.text
@@ -213,6 +222,6 @@ class RedditScraper(BaseScraper):
         session.commit()
         session.close()
 
-def scrape_reddit_loop():
+def scrape_reddit_loop(subreddit=None):
     scraper = RedditScraper()
-    scraper.scrape_loop()
+    scraper.scrape_loop(subreddit)

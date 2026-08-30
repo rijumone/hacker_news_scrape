@@ -153,6 +153,7 @@ def schedule_weekly_backup():
 # Add arguments for initializing database in CLI
 parser = argparse.ArgumentParser(description='Management commands')
 parser.add_argument('action', type=str, help="an action for the database")
+parser.add_argument('--subreddit', type=str, help="subreddit name to scrape (optional)")
 args = parser.parse_args()
 if args.action == 'init_db':
     initialize_database()
@@ -165,7 +166,7 @@ if args.action == 'scrape_lobsters':
 if args.action == 'scrape_high_scalability':
     scrape_high_scalability_loop()
 if args.action == 'scrape_reddit':
-    scrape_reddit_loop()
+    scrape_reddit_loop(args.subreddit)
 if args.action == 'backup_db':
     # Only backup database on Sunday
     if datetime.now(timezone.utc).weekday() == 6:
