@@ -47,6 +47,37 @@ services:
                gunicorn server:app --bind 0.0.0.0:8001 --workers=2 --timeout=120 --log-file=-;
              fi"
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    ports:
+      # - "5672:5672"
+      # - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /app
+      DB_CONNECTION: postgresql+psycopg2://hn:hn_password@db:5432/hacker_news
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+    volumes:
+      - .:/app
+    command: celery -A hacker_news.celery_app worker --loglevel=info
+
   adminer:
     image: adminer:latest
     restart: unless-stopped

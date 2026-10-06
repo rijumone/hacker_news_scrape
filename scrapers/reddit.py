@@ -50,7 +50,6 @@ class RedditScraper(BaseScraper):
         print('Scrape completed for Reddit.')
 
     async def scrape_page(self, subreddit, feed_id, loop):
-        session = models.Session()
         print(f'Scrape initiated for subreddit {subreddit}')
         now = int(datetime.utcnow().strftime('%s'))
 
@@ -66,7 +65,6 @@ class RedditScraper(BaseScraper):
         title_regex = re.compile(r"^\[(.*?)\]\((https://www\.reddit\.com/r/[^/]+/comments/([a-z0-9]+)/[^/]+/?)\)", re.MULTILINE)
         matches = list(title_regex.finditer(feed_md))
 
-        post_comment_tasks = []
         feed_rank = 1
 
         for i in range(len(matches)):
@@ -112,39 +110,22 @@ class RedditScraper(BaseScraper):
                             if content.endswith(']'):
                                 content = content[:-1]
 
-            post_exists = session.query(models.Post.id).filter_by(uid=uid, source='reddit').scalar()
-
-            if not post_exists:
-                post = models.Post(created=created, uid=uid, source='reddit',
-                                   link=link, title=title, type='article', username=username, website='reddit.com', content=content)
-                session.add(post)
-                session.commit()
-                post_id = post.id
-            else:
-                post_id = post_exists
-
-            feed_post_exists = session.query(models.FeedPost.post_id).filter_by(
-                post_id=post_id, feed_id=feed_id).scalar()
-
-            if not feed_post_exists:
-                feed_post = models.FeedPost(comment_count=0, feed_id=feed_id,
-                                            feed_rank=feed_rank, point_count=0, post_id=post_id)
-                session.add(feed_post)
-                try:
-                    session.commit()
-                except IntegrityError:
-                    session.rollback()
-
-                post_comment_tasks.append(
-                    loop.create_task(self.scrape_post(uid, link, feed_id, loop)))
+            post_data = {
+                'uid': uid,
+                'link': link,
+                'title': title,
+                'username': username,
+                'content': content,
+                'created': created,
+                'feed_rank': feed_rank
+            }
+            from hacker_news.tasks import process_post_task
+            process_post_task.delay(feed_id, post_data)
 
             feed_rank += 1
 
-        if post_comment_tasks:
-            await asyncio.wait(post_comment_tasks)
-        session.close()
-
     async def scrape_post(self, post_uid, link, feed_id, loop):
+        """DEPRECATED: This method's logic has been moved to Celery worker process_comments_task."""
         session = models.Session()
         post_id = session.query(models.Post.id).filter_by(uid=post_uid, source='reddit').scalar()
         if not post_id:
